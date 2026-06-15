@@ -8,6 +8,7 @@
 4. Tài liệu tham khảo
 
 1. Tổng quan
+
 <img width="379" height="482" alt="image" src="https://github.com/user-attachments/assets/d17ca70e-9df7-4f2d-b79a-eaf27c5617ab" />
 
 Một cách ngắn gọn, có thể hiểu tài khoản AWS như một "container" chứa các thực thể được tạo bởi tài khoản (IAM User, IAM Group, IAM Role) và tài nguyên AWS được cung cấp cho các thực thể đó. Tất cả chi phí phát sinh trong quá trình sử dụng các dịch vụ, bất kể được dùng bởi thực thể nào sẽ được tính vào chi phí của tài khoản và được khấu trừ theo phương thức thanh toán.
