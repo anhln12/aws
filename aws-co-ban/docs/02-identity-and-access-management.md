@@ -75,3 +75,158 @@ Luật thứ hai từ chối rõ ràng (Explicit Deny) việc thực hiện tấ
 Các hành động và dịch vụ khác không được đề cập sẽ bị ngầm từ chối (Implicit Deny).
 
 Tổng hợp lại, identity được/bị gán policy này sẽ có quyền làm mọi thứ trên tất cả S3 bucket, ngoại trừ bucket denied-bucket và các object trong đó.
+
+Có 2 loại policy:
+- Inline policy: mỗi identity có một inline policy, xác định quyền hạn của identity đó, không thể gán cho identity khác.
+- Managed policy: có thể tái sử dụng để gán cho nhiều identity. Trong đó có thể phân loại thành AWS managed policy (AWS cung cấp sẵn, không thể thay đổi) và Customer managed policy (do người dùng tự viết, tuỳ ý thay đổi).
+
+Rõ ràng inline policy có nhiều hạn chế hơn, nên thường chỉ được sử dụng cho các trường hợp đặc biệt cần cấp quyền cụ thể ngoài các quyền chung đã được cấp theo managed policy. Hầu hết các trường hợp sẽ sử dụng managed policy để dễ quản lý.
+
+ARN (Amazon Resource Name) là cách định danh duy nhất tài nguyên AWS trong bất cứ tài khoản nào. Cú pháp như sau:
+```
+arn:partition:service:region:account-id:resource-id
+arn:partition:service:region:account-id:resource-type/resource-id
+arn:partition:service:region:account-id:resource-type:resource-id
+```
+
+Trong đó:
+
+- arn: là tiền tố cố định.
+- partition: AWS phân vùng dịch vụ để phục vụ các đối tượng khác nhau. Giá trị partition xác định vùng dịch vụ, và chỉ có 3 giá trị: “aws” dùng cho mục đích thương mại thông thường trên toàn cầu (trừ Trung Quốc), “aws-us-gov” dành riêng cho chính phủ Mỹ, và “aws-cn” cho thị trường Trung Quốc. Tất nhiên chúng ta chỉ dùng “aws”.
+- service: tên dịch vụ (ví dụ “s3”, “iam”, “lambda”).
+- region: vùng (ví dụ “us-east-1”). Các dịch vụ không có vùng (ví dụ IAM) sẽ để trống.
+- account-id: là định danh tài khoản AWS (12 chữ số). Một vài dịch vụ cũng sẽ để trống trường này.
+- resource-type, resource-id: định danh tài nguyên; có nhiều dạng: resource-type/resource-id, resource-type:resource-id, hoặc chỉ resource-id.
+
+Ví dụ:
+```
+arn:aws:s3:::awscoban-bucket
+```
+
+ARN này định danh một S3 bucket tên là awscoban-bucket. Chú ý, nó chỉ định danh bucket, không bao gồm object trong bucket này. Muốn làm vậy ta cần dùng ARN sau:
+```
+arn:aws:s3:::awscoban-bucket/duong-dan-den-object
+```
+
+ARN này định danh một object cụ thể có đường dẫn duong-dan-den-object trong bucket awscoban-bucket. Nếu muốn lấy tất cả object trong bucket, ta có thể dùng wildcard (*) như sau:
+```
+arn:aws:s3:::awscoban-bucket/*
+```
+
+2. IAM User
+
+Là người hoặc ứng dụng đc cấp quyền truy cập tài khoản AWS. Người khá dễ hình dung IAM User được tạo sẽ được cấp tên đăng nhập (IAM username) và mật khẩu. có thể đăng nhập và sử dụng AWS trên giao diện theo quyền được cài đặt, hoặc có thể tạo access key để sử dụng Command Line Interface (CLI). Access key cũng chính là thứ giúp cấp quyền cho ứng dụng như một IAM User. Có thể tạo tối đa 100,000 IAM Users trong một tài khoản AWS.
+
+3. IAM Group
+
+Một cách đơn giản, IAM Group là một tập hợp chứa các IAM User có liên quan, có chung một vài hoặc nhiều quyền truy cập, ví dụ như các thành viên trong một team (Developer, HR, v.v.) có thể được nhóm chung. Tối đa Lưu ý, không thể tạo IAM Group trong một IAM Group khác, và IAM Group không có thông tin đăng nhập (credential) như IAM User, nên tất nhiên không thể đăng nhập. Ta cũng không thể chọn IAM Group là principal trong resource policy.
+
+Mặc định policy của IAM Group sẽ được áp dụng cho tất cả user trong đó. Nếu một user được/bị đặt thêm policy riêng thì sẽ được gộp với policy của group để ra policy cuối cùng cho người đó. Việc gộp sẽ theo nguyên tắc Explicit Deny - Explicit Allow - Implicit Deny đã trình bày ở trên.
+
+Tại thời điểm viết bài, có thể tạo tối đa 100,000 IAM Group trong một tài khoản AWS (không thể yêu cầu tăng thêm). Mỗi IAM User có thể ở trong tối đa 1000 IAM Group.
+
+4. IAM Role
+
+Phía trên mình có đề cập ta có thể cấp quyền sử dụng AWS cho ứng dụng (của AWS hoặc bên thứ ba) bằng access key của IAM User, nhưng cách này không được khuyến khích. Thay vào đó, nên sử dụng IAM Role, vì hai lý do chính: bảo mật hơn và nhiều đối tượng có thể sử dụng chung một Role, thay vì phải tạo nhiều IAM User (có giới hạn số lượng như đã đề cập).
+
+IAM Role cấp quyền sử dụng tài nguyên một cách tạm thời, thông qua một token được cấp bởi AWS Security Token Service (STS) khi một danh tính hợp lệ sử dụng IAM Role đó. Cơ chế tạm thời này là lý do IAM Role bảo mật hơn so với việc sử dụng access key của IAM User.
+
+<img width="755" height="368" alt="image" src="https://github.com/user-attachments/assets/8974902f-3f0b-4aaf-8a64-fd9aaa3eef32" />
+
+Các thuật ngữ liên quan:
+
+- Principal: các danh tính muốn sử dụng IAM Role (thuật ngữ tiếng Anh là “assume role”). Các danh tính này có thể là IAM User, ứng dụng, dịch vụ AWS, ở cùng hoặc khác tài khoản, thậm chí là người dùng bên ngoài không có tài khoản AWS, muốn đăng nhập bằng tài khoản mạng xã hội như Facebook, Google, v.v.
+- Trust Policy: xác định các principal được phép sử dụng IAM Role.
+
+Ví dụ, trust policy dưới đây của một IAM Role cho phép IAM User awscoban trong tài khoản 123456789012 sử dụng role này (bằng cách cho phép hành động sts:AssumeRole):
+```
+{
+    "Version": "2012-10-17",
+        "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::123456789012:user/awscoban"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+```
+
+Một trust policy khác cho phép người dùng bên ngoài, đăng nhập bằng tài khoản Google, sử dụng IAM Role này (bằng cách cho phép hành động sts:AssumeRoleWithWebIdentity):
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": { 
+                "Federated": "accounts.google.com"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity"
+        }
+    ]
+}
+```
+- Permission Policy: xác định quyền mà danh tính hợp lệ sẽ có khi sử dụng IAM Role. Tương tự như IAM Policy đã trình bày ở trên.
+
+Khi một danh tính muốn truy cập tài nguyên AWS bằng IAM Role, nếu danh tính đó được phép sử dụng role (được liệt kê trong Trust Policy), AWS STS sẽ cấp một token tạm thời cho danh tính này, kèm theo các quyền được xác định trong Permission Policy của IAM Role. Danh tính này sẽ sử dụng token để truy cập tài nguyên AWS trong thời gian token có hiệu lực (từ 1 giờ đến 12 giờ, mặc định 1 giờ).
+
+Các trường hợp sử dụng IAM Role phổ biến:
+- Một dịch vụ hoặc tài nguyên AWS truy cập vào tài nguyên AWS khác trong tài khoản của bạn. Ví dụ một EC2 cần truy cập vào một S3 bucket, ta có thể tạo một IAM Role, với Trust Policy liệt kê ARN của EC2 đó trong trường Principal và gán permission policy cho phép các hành động cần thiết trên S3 bucket và các object trong đó.
+- Một tài khoản AWS truy cập tài khoản AWS khác. Ví dụ, một IAM User trong tài khoản A cần truy cập vào một S3 bucket trong tài khoản B. Ở tài khoản B, ta tạo một IAM Role, với Trust Policy liệt kê ARN của IAM User trong tài khoản A trong trường Principal, và gán permission policy tương tự như trên.
+- Người dùng bên ngoài (không có tài khoản AWS) đăng nhập bằng tài khoản mạng xã hội (Google, Facebook, v.v.) cần truy cập tài nguyên AWS. Ví dụ, một ứng dụng di động cho phép người dùng đăng nhập bằng tài khoản Google để tải ảnh lên một S3 bucket trong tài khoản AWS của bạn. Ta có thể tạo một IAM Role, với Trust Policy liệt kê accounts.google.com trong trường Principal, và gán permission policy cho phép hành động s3:PutObject trên S3 bucket tương ứng.
+- Khách hàng doanh nghiệp đăng nhập vào AWS sử dụng hệ thống xác thực nội bộ (corporate identity provider - IdP), hỗ trợ SAML 2.0. Ví dụ, một công ty sử dụng Microsoft Active Directory Federation Services (ADFS) để quản lý danh tính nhân viên, và muốn cho phép nhân viên truy cập vào tài nguyên AWS mà không cần tạo IAM User riêng cho từng người. Ta có thể tạo một IAM Role, với Trust Policy liệt kê IdP của công ty trong trường Principal, và gán permission policy phù hợp.
+
+5. Resource Policy
+
+Đây là policy gán trực tiếp vào tài nguyên AWS, quy định những principal (IAM User, Group, Role) được truy cập, và được thực hiện những hành động nào, trái ngược với IAM identity policy gán cho đối tượng sử dụng tài nguyên.
+
+Ví dụ, dưới đây là một S3 bucket policy (là resource policy của S3), cho phép IAM User awscoban đọc và ghi dữ liệu lên bucket important-bucket, nhưng không cho phép bất cứ ai xoá dữ liệu trong bucket đó
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::123456789012:user/awscoban"
+      },
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::important-bucket/*"
+    },
+    {
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:DeleteObject",
+      "Resource": "arn:aws:s3:::important-bucket/*"
+    }
+  ]
+}
+```
+
+Một hạn chế của IAM Policy là chỉ có thể được gán cho danh tính thuộc cùng tài khoản AWS, nên mặc định ta không thể cấp quyền truy cập tài nguyên trong tài khoản của mình cho các danh tính thuộc tài khoản khác. Resource Policy, do được gán cho tài nguyên, cho phép xác định quyền truy cập đa tài khoản (cross-account access), tức Principal có thể là danh tính của tài khoản khác. Ví dụ, S3 bucket policy dưới đây cho phép Root User của tài khoản 987654321098 được đọc và ghi object trong important-bucket của tài khoản 123456789012:
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CrossAccountAccess",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::987654321098:root" // Tài khoản khác
+      },
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3::123456789012:important-bucket/*"
+    }
+  ]
+}
+```
+
