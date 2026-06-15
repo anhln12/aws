@@ -9,7 +9,7 @@
 
 ======================================================================
 
-1. Tổng quan
+1. #Tổng quan
 
 <img width="379" height="482" alt="image" src="https://github.com/user-attachments/assets/d17ca70e-9df7-4f2d-b79a-eaf27c5617ab" />
 
