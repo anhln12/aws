@@ -4,3 +4,4 @@ AWS Cơ Bản
 2. [Identity and Access Management (IAM)](docs/02-identity-and-access-management.md)
 3. [Hạ tầng AWS](docs/03-ha-tang-aws.md)
 4. [Virtual Private Cloud (VPC)](docs/04-virtual-private-cloud.md)
+5. [Thiết kế VPC](docs/05-thiet-ke-vpc.md)
