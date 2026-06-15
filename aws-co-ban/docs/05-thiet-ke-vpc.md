@@ -25,4 +25,5 @@ Kích thước VPC (và subnet) tối thiểu là /28 (16 IP), tối đa là /16
 
 Dưới đây là bảng tổng hợp kích thước VPC và subnet phổ biến:
 |Kích thước VPC|Số subnet trong VPC|Kích thước Subnet|Số IP khả dụng mỗi subnet|Tổng số IP khả dụng trong VPC|
+-----
 |/24|8|/27|27|216|
