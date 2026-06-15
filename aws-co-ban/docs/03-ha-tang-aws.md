@@ -1,4 +1,4 @@
-Bài này giới thiệu tổng quan về hạ tầng toàn cầu của AWS, các khái niệm quan trọng như Region, Availability Zone, thế nào là một ứng dụng đáp ứng yêu cầu High Availability, Fault Tolerance. Ta cũng sẽ tìm hiểu mô hình chia sẻ trách nhiệm giữa AWS và khách hàng.
+<img width="752" height="410" alt="image" src="https://github.com/user-attachments/assets/d65add21-7061-44d6-956c-53f60bd32f50" />Bài này giới thiệu tổng quan về hạ tầng toàn cầu của AWS, các khái niệm quan trọng như Region, Availability Zone, thế nào là một ứng dụng đáp ứng yêu cầu High Availability, Fault Tolerance. Ta cũng sẽ tìm hiểu mô hình chia sẻ trách nhiệm giữa AWS và khách hàng.
 
 Trong bài này:
 1. Hạ tầng toàn cầu của AWS
@@ -18,6 +18,107 @@ Tài liệu tham khảo
 =====================================================================
 
 1. Hạ tầng toàn cầu của AWS
+
 1.1. Khu vực (Region)
 
 AWS triển khai hạ tầng tại các địa điểm vật lý khác nhau trên toàn cầu, gọi là Region. Mỗi Region được đặt các trung tâm dữ liệu (data center) để cung cấp dịch vụ cho khách hàng. Các Region hoạt động độc lập với nhau, và có thể lựa chọn Region phù hợp nhất khi triển khai dịch vụ AWS để giảm độ trễ, tăng khả năng chịu lỗi, hay tuân thủ các yêu cầu về dữ liệu. Ví dụ, nếu phục vụ khách hàng tại Việt Nam, có thể chọn Region Singapore (ap-southeast-1), Indonesia (ap-southeast-3), hay Malaysia (ap-southeast-5) để giảm độ trễ, nếu dịch vụ AWS cần dùng khả dụng tại các Region này.
+
+1.2. Vùng khả dụng (Availability Zone)
+
+Trong mỗi Region, ta gọi mỗi cụm trung tâm dữ liệu là một Vùng khả dụng (Availability Zone - AZ). Mỗi Region bao gồm ít nhất 3 AZ, tại các vị trí cách biệt nhau trong Region. Các AZ có hệ thống điện, làm mát độc lập, kết nối mạng siêu nhanh. Hình dưới đây minh hoạ Region North Virginia (us-east-1) với 6 AZ. Đây là Region lớn nhất của của AWS, phục vụ nhiều khách hàng nhất, nên số lượng AZ cũng nhiều nhất.
+<img width="752" height="368" alt="image" src="https://github.com/user-attachments/assets/02e54675-27a3-4e4f-b879-16eff4551e1e" />
+
+Mỗi AZ được định danh bằng AZ ID duy nhất trên toàn cầu, ví dụ Region us-east-1 (đặt tại North Virginia, Hoa Kỳ) có 6 AZ từ use1-az1 đến use1-az6. Lưu ý, AZ ID không giống với mã AZ trong mỗi tài khoản AWS như us-east-1a, us-east-1b. Trong mỗi tài khoản AWS, mã AZ được ánh xạ ngẫu nhiên tới AZ ID thực tế. Ví dụ, mã AZ us-east-1a trong tài khoản A trên thực tế là AZ có ID use1-az3, nhưng trong tài khoản B lại là AZ use1-az1.
+
+Để xem ánh xạ giữa mã AZ và AZ ID trong tài khoản AWS, có thể sử dụng lệnh CLI sau (ví dụ cho Region us-east-1):
+```
+aws ec2 describe-availability-zones --region us-east-1 --query "AvailabilityZones[].{AZ_Code:ZoneName,AZ_ID:ZoneId}" --output table
+```
+
+Kết quả:
+```
+----------------------------
+| DescribeAvailabilityZones|
++-------------+------------+
+|   AZ_Code   |   AZ_ID    |
++-------------+------------+
+|  us-east-1a |  use1-az2  |
+|  us-east-1b |  use1-az4  |
+|  us-east-1c |  use1-az6  |
+|  us-east-1d |  use1-az1  |
+|  us-east-1e |  use1-az3  |
+|  us-east-1f |  use1-az5  |
++-------------+------------+
+```
+
+Do đó, khi thiết kế ứng dụng trên AWS, nhất là khi cần đa tài khoản (chia sẻ subnet trong VPC giữa các tài khoản), ta nên sử dụng AZ ID để đảm bảo tính nhất quán. Thực tế, các AWS Region được triển khai sau năm 2012 đã cố định ánh xạ mã AZ với AZ ID trong tất cả tài khoản AWS, tuy nhiên, 9 Region cũ hơn vẫn giữ ánh xạ ngẫu nhiên, là us-east-1, us-west-1, us-west-2, eu-west-1, ap-southeast-1, ap-southeast-2, ap-northeast-1, sa-east-1, và Region ở US-West cho các tài khoản AWS GovCloud của chính phủ Mỹ (xem lại khái niệm partition trong bài IAM).
+
+1.3. Edge Location
+
+Edge Location là các trung tâm dữ liệu đặt rải rác trên toàn cầu, gần với người dùng cuối hơn so với các Region và AZ chính. Mục đích để cung cấp bộ nhớ đệm (cache) để giảm độ trễ truy cập. Khác với Region và AZ, Edge Location không cung cấp các dịch vụ AWS trực tiếp cho người dùng, mà đây là hạ tầng hỗ trợ các dịch vụ như CloudFront (Content Delivery Network của AWS), Global Accelerator (dịch vụ tăng tốc mạng), Lambda@Edge, và Route 53 (dịch vụ DNS).
+
+1.4. Local Zone
+
+Có thể hiểu Local Zone là một AZ mở rộng của Region, nhưng ở gần người dùng hơn. Local Zone được kết nối với Region chính bằng mạng chuyên dụng của AWS, nên phù hợp với các ứng dụng cần độ trễ siêu thấp.
+
+Ví dụ, Local Zone ở Los Angeles us-west-2-lax-1 mở rộng Region us-west-2 (Oregon), nên người dùng ở khu vực Los Angeles (phía nam bang California) sẽ có trải nghiệm tốt hơn so với việc phải kết nối đến các AZ chính của us-west-2 (nằm ở bang Oregon), hay các AZ của us-west-1 (phía bắc bang California, cách Los Angeles khá xa).
+
+Có thể bạn đọc sẽ thắc mắc, Local Zone này ở bang California, tại sao lại không thuộc về Region us-west-1 (cùng ở bang California), mà lại là của Region us-west-2 (ở bang Oregon, nằm phía bắc bang California). Mình cũng đã thử tìm hiểu qua, nhưng vẫn chưa biết lý do.
+
+Lưu ý, không phải tất cả dịch vụ AWS đều có sẵn trong Local Zone.
+
+1.5. Outpost
+
+Đây là giải pháp cho phép khách hàng chạy các dịch vụ AWS ngay tại hạ tầng on-premise của mình, cho phép tận dụng sức mạnh của AWS mà vẫn giữ dữ liệu và ứng dụng tại chỗ để đáp ứng các yêu cầu về compliance, bảo mật, hoặc độ trễ. Do đó, nó phù hợp với các ngành như y tế, tài chính, có yêu cầu nghiêm ngặt về dữ liệu. Outpost được thiết kế dưới dạng rack server được AWS cấu hình sẵn và giao trực tiếp đến khách hàng, được bảo trì, cập nhật và hỗ trợ kỹ thuật bởi AWS.
+
+2. High Availability, Fault Tolerance, Disaster Recovery
+
+Tại sao AWS triển khai hạ tầng với nhiều Region và AZ như vậy? Đó là để cung cấp tính khả dụng cao (High Availability), khả năng chịu lỗi (Fault Tolerance) và phục hồi thảm họa (Disaster Recovery) cho các ứng dụng và dịch vụ của khách hàng.
+
+2.1. High Availability (HA)
+
+Một hệ thống HA sẽ đảm bảo hiệu quả hoạt động, thường được đo bởi uptime (thời gian hệ thống hoạt động liên tục và khả dụng), ở một mức độ cao, trong một khoảng thời gian dài.
+
+Ví dụ:
+- Hệ thống với uptime 99.9% có tổng thời gian ngừng hoạt động (downtime) khoảng 8.77 giờ mỗi năm.
+- Hệ thống với uptime 99.99% có tổng downtime chỉ khoảng 52.6 phút mỗi năm.
+
+2.2. Fault Tolerance (FT)
+
+Một hệ thống FT có khả năng tiếp tục hoạt động bình thường ngay cả khi một hoặc nhiều thành phần của nó gặp sự cố. Theo một nghĩa nào đó khá giống HA, nhưng thực ra FT là một khái niệm rộng hơn, không chỉ yêu cầu duy trì uptime cao, mà còn phải hoạt động đúng chức năng ngay cả khi có sự cố xảy ra và trong thời gian khắc phục.
+
+HA tập trung vào việc giảm tối đa thời gian ngừng hoạt động, trong khi FT tập trung vào việc duy trì hoạt động liên tục và đúng chức năng khi gặp sự cố.
+
+Để dễ hình dung, giả sử ta có một ứng dụng chạy trên một máy chủ. Khi máy chủ này gặp vấn đề, ta thay bằng máy chủ khác, cài đặt lại ứng dụng và khôi phục dữ liệu. Việc thay thế này, giả sử đủ nhanh (10 phút), hệ thống vẫn là HA (vì downtime chỉ là 10 phút), nhưng không phải FT (vì trong 10 phút đó, ứng dụng không hoạt động).
+
+Để hệ thống này FT, ta cần ít nhất hai máy chủ chạy song song, đồng bộ dữ liệu liên tục. Khi một máy gặp sự cố, máy còn lại sẽ tiếp tục phục vụ người dùng mà không bị gián đoạn. Hơn nữa cũng cần có cơ chế tự động phát hiện lỗi và chuyển đổi (failover) sang máy còn hoạt động. Càng nhiều thành phần được nhân bản, hệ thống càng có tính FT. Do đó, xây dựng hệ thống FT phức tạp và tốn kém hơn nhiều so với HA.
+
+2.3. Disaster Recovery (DR)
+
+Khi một thảm họa lớn xảy ra (ví dụ thiên tai, mất điện diện rộng, tấn công mạng quy mô lớn), các hệ thống dù là FT cũng rất dễ bị ảnh hưởng. DR là quy trình khôi phục hoạt động của hệ thống trong thời gian ngắn nhất. DR bao gồm cả việc lên kế hoạch trước khi thảm họa xảy ra, và quy trình khôi phục sau đó.
+
+Công việc cần chuẩn bị bao gồm sao lưu dữ liệu định kỳ, nhân bản một hệ thống khác sẵn sàng (standby) và quy định chi tiết trình tự khôi phục dịch vụ, để khi thảm họa xảy ra, kỹ thuật viên có thể nhanh chóng thực hiện để đưa hệ thống hoạt động bình thường trở lại. Luôn luôn phải có backup, cả về dữ liệu lẫn phần cứng, lý tưởng nhất là ở các địa điểm khác nhau để tránh rủi ro tập trung.
+
+2.4. Khả năng phục hồi của dịch vụ AWS
+
+Do AWS cung cấp hạ tầng phân tán trên nhiều Region và AZ, nên các dịch vụ AWS đều có khả năng HA và FT cao. Các mức độ phục hồi (resilience) của dịch vụ AWS được phân loại như sau:
+
+AZ Resilience: dịch vụ chỉ hoạt động trong một AZ duy nhất. Chỉ cần AZ này gặp sự cố, dịch vụ sẽ bị gián đoạn.
+
+Region Resilience: dịch vụ hoạt động trên nhiều AZ trong một Region, sao lưu và đồng bộ dữ liệu giữa các AZ. Nếu một AZ gặp sự cố, dịch vụ vẫn hoạt động bình thường nhờ các AZ khác. Cần phải có sự cố lớn trên toàn bộ Region mới ảnh hưởng đến dịch vụ.
+
+Global Resilience: dịch vụ hoạt động trên nhiều Region, ví dụ Route 53, IAM, v.v. Nếu một Region gặp sự cố, dịch vụ vẫn hoạt động bình thường nhờ các Region khác trên toàn cầu. Đây là mức độ phục hồi cao nhất, cần phải có một thảm hoạ quy mô toàn cầu mới có thể làm gián đoạn.
+
+3. Mô hình chia sẻ trách nhiệm
+
+<img width="752" height="410" alt="image" src="https://github.com/user-attachments/assets/a535f561-465e-494e-b124-d2b546935bea" />
+
+AWS vận hành theo mô hình chia sẻ trách nhiệm (Shared Responsibility Model) với khách hàng. Theo đó, AWS chịu trách nhiệm về bảo mật của đám mây (Security of the Cloud), bao gồm địa điểm đặt trung tâm dữ liệu (Region, AZ, Edge Location), phần cứng, mạng, máy chủ vật lý cho tính toán, lưu trữ, cơ sở dữ liệu. Lưu ý, trong hình trên, “Software” được đề cập trong trách nhiệm của AWS là phần mềm ảo hoá (hypervisor), dùng để chạy nhiều máy chủ ảo (EC2 instance) trên cùng một máy chủ vật lý, chứ không phải phần mềm ứng dụng do khách hàng triển khai trên AWS.
+
+Mặt khác, khách hàng chịu trách nhiệm về bảo mật trong đám mây (Security in the Cloud) từ hệ điều hành trở đi, bao gồm:
+- Mã hoá và đảm bảo toàn vẹn dữ liệu, cả khi lưu trữ và truyền tải.
+- Cấu hình hệ điều hành, mạng và tường lửa đúng cách
+- Quản lý truy cập, IAM, bảo mật ứng dụng
+- Dữ liệu
+
+
