@@ -5,3 +5,4 @@ AWS Cơ Bản
 3. [Hạ tầng AWS](docs/03-ha-tang-aws.md)
 4. [Virtual Private Cloud (VPC)](docs/04-virtual-private-cloud.md)
 5. [Thiết kế VPC](docs/05-thiet-ke-vpc.md)
+6. [Định tuyến trong VPC](docs/06-dinh-tuyen-trong-vpc.md)
