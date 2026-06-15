@@ -14,4 +14,9 @@ Trong bài này:
 - Trust Policy
 - Permission Policy
 5. Resource Policy
-Tài liệu tham khảo
+6. Tài liệu tham khảo
+
+===================================================================================================
+
+1. IAM Policy
+IAM Policy xác định một identity được phép thực hiện (Allow) hoặc bị chặn (Deny) những hành động gì, trên những dịch vụ nào của AWS. Policy có thể là Identity‑based (gắn vào IAM User/Group/Role), hoặc Resource‑based (gắn trực tiếp vào tài nguyên như, ví dụ như S3 bucket policy).
