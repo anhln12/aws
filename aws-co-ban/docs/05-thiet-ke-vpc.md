@@ -27,3 +27,65 @@ Dưới đây là bảng tổng hợp kích thước VPC và subnet phổ biến
 |Kích thước VPC|Số subnet trong VPC|Kích thước Subnet|Số IP khả dụng mỗi subnet|Tổng số IP khả dụng trong VPC|
 |-|-|-|-|-|
 |/24|8|/27|27|216|
+
+Diễn giải: giả sử ứng dụng có quy mô nhỏ, chỉ cần tổng cộng dưới 200 IP để cấp phát (cho các EC2 instance, DB instance, Lambda function, v.v.), có thể chọn kích thước VPC /24 ở dòng đầu tiên trong bảng. Có thể chia thành 8 subnet kích thước /27 (vì 2^(32-24)/2(32-27) = 8), mỗi subnet sẽ có 26(32-27) - 5 = 27 IP khả dụng, như vậy tổng số IP khả dụng trong VPC là 27 * 8 = 216 đủ dùng cho ứng dụng.
+
+Tất nhiên, đây chỉ là thiết kế thô, chưa cân nhắc đến vấn đề mở rộng hay đáp ứng HA, FT. Và do việc tạo VPC là miễn phí, bất kể kích thước (bạn chỉ bị tính phí cho các tài nguyên chạy trên VPC), nên phương án tốt nhất là chọn kích thước VPC tối đa (/16), tránh các vấn đề về sau khi cần mở rộng.
+
+2. Thiết kế VPC cho ứng dụng đa tầng
+
+Hãy đi vào một bài toán cụ thể, ta cần thiết kế VPC cho một ứng dụng đa tầng (multi-tier) trên AWS, hay được sử dụng trong thực tế cũng như trong câu hỏi thi chứng chỉ AWS, gồm 3 tầng:
+- Web Tier (hay còn gọi Presentation Tier): giao tiếp với người dùng, hiển thị dữ liệu, thu thập và kiểm tra đầu vào.
+- Application Tier (hay Logic Tier): xử lý logic chính của ứng dụng.
+- Database Tier: lưu trữ dữ liệu.
+
+2.1. Cấu trúc đa tầng
+
+Khi thiết kế VPC cho ứng dụng này, đầu tiên ta cân nhắc sẽ triển khai trên bao nhiêu AZ (để đáp ứng HA, FT). Một VPC ứng với một Region, một Region có ít nhất 3 AZ. Và 3 AZ là đủ để ứng dụng đạt Region Resilience.
+
+Trong một AZ, mỗi tầng ứng dụng nên được đặt trong một subnet, cùng với một subnet dự phòng, tổng cộng ta cần 4 subnet trong mỗi AZ, tức 12 subnet trong 3 AZ.
+
+Như vậy, ta có thiết kế như sau:
+
+<img width="685" height="591" alt="image" src="https://github.com/user-attachments/assets/53baf68a-625b-4ed4-aa30-d156758d8dac" />
+
+Giả sử VPC có kích thước /16, ta cần 12 subnet. Để tiện tính toán, ta có thể chia VPC thành 16 subnet kích thước /20 (luỹ thừa của 2 gần 12 nhất làm tròn lên là 16 = 2^4), dùng 12 subnet chia cho các tầng ứng dụng ở 3 AZ.
+
+Ở đây, tầng Web sẽ đặt trong public subnet (màu xanh lá trong hình), do tính chất cần tương tác với người dùng. Tầng Application và Database nên đặt trong private subnet (màu thiên thanh trong hình) để bảo mật, do chúng thường không cần kết nối bên ngoài. Các subnet trong cùng VPC mặc định có thể giao tiếp với nhau, nên giao tiếp giữa các tầng ứng dụng vẫn được đảm bảo. Bạn đọc có thể xem lại định nghĩa public và private subnet trong bài trước.
+
+2.2. Cấu trúc đa vùng, đa giai đoạn
+
+Nhưng, vẫn chưa xong! Thiết kế như vậy chỉ giúp ứng dụng đạt khả năng phục hồi Region Resilience. Việc này, dù trong đa số trường hợp là đủ đáp ứng yêu cầu kỹ thuật, nhưng với các ứng dụng lớn có quy mô toàn cầu thì cần Global Resilience. Khi đó, ta cần triển khai ứng dụng trên ít nhất một Region khác, tức là cần tạo một VPC với CIDR không trùng lặp với các VPC ở Region khác của ứng dụng, hay tốt hơn hết là không trùng với CIDR nào của doanh nghiệp. Dễ hiểu, vì theo nguyên tắc ta cần IP duy nhất trong phạm vi nội bộ tổ chức.
+
+Thêm nữa, trong dự án thường sẽ theo quy trình Development, Staging, Production. Ta có thể thiết kế tiếp VPC cho từng giai đoạn, đơn giản là tạo các tài khoản AWS tương ứng rồi “nhân bản có điều chỉnh” khối VPC đa vùng ở trên cho các tài khoản. Việc “điều chỉnh” ở đây là cho CIDR của từng VPC. Một lần nữa, nguyên tắc cần ghi nhớ là CIDR của các VPC không trùng lặp! Việc này sẽ hạn chế rất nhiều vấn đề phát sinh về sau nếu cùng IP được cấp phát cho nhiều thiết bị trong cùng dự án hay cùng tổ chức.
+
+Hình dưới đây tổng quát hoá việc thiết kế VPC cho ứng dụng đa tầng, đa vùng, và đa giai đoạn (vì lặp lại nên mình chỉ minh hoạ Development và Production).
+
+<img width="759" height="703" alt="image" src="https://github.com/user-attachments/assets/8bc52ba4-e32d-459d-9f63-1aa806ddd61c" />
+
+Đương nhiên, thực tế chỉ môi trường Production là cần mức chịu lỗi cao nhất, nên nếu cần tiết kiệm chi phí, chỉ cần thiết kế VPC đa vùng cho môi trường này. Development và Staging có thể cân nhắc sử dụng VPC đơn vùng (thậm chí đơn AZ).
+
+2.3. Ví dụ
+
+Dưới đây là ví dụ CIDR cụ thể cho các VPC của ứng dụng, giả sử triển khai 3 giai đoạn, 2 Region, 3 AZ, 3 tầng + 1 dự phòng. Ở đây mình chọn dải IP 10.x.x.x.
+
+|Giai đoạn|Region|VPC CIDR|
+|-|-|-|
+|Development|Region 1|10.0.0.0/16|
+|Development|Region 2|10.1.0.0/16|
+|Staging|Region 1|10.2.0.0/16|
+|Production|Region 1|10.4.0.0/16|
+|Production|Region 2|10.5.0.0/16|
+
+Trong VPC 10.0.0.0/16, ta chia thành 12 subnet kích thước /20 theo AZ và tầng như sau:
+|Web AZ 1|App AZ 1|DB AZ 1|Spare AZ 1|
+|-|-|-|-|
+|10.0.0.0/20|10.0.16.0/20|10.0.32.0/20|10.0.48.0/20|
+
+|Web AZ 2|App AZ 2|DB AZ 2|Spare AZ 2|
+|-|-|-|-|
+|10.0.64.0/20|10.0.80.0/20|10.0.96.0/20|10.0.112.0/20|
+
+|Web AZ 3|App AZ 3|DB AZ 3|Spare AZ 3|
+|-|-|-|-|
+|10.0.128.0/20|10.0.144.0/20|10.0.160.0/20|10.0.176.0/20|
