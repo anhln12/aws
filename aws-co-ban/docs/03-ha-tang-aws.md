@@ -1,4 +1,4 @@
-<img width="752" height="410" alt="image" src="https://github.com/user-attachments/assets/d65add21-7061-44d6-956c-53f60bd32f50" />Bài này giới thiệu tổng quan về hạ tầng toàn cầu của AWS, các khái niệm quan trọng như Region, Availability Zone, thế nào là một ứng dụng đáp ứng yêu cầu High Availability, Fault Tolerance. Ta cũng sẽ tìm hiểu mô hình chia sẻ trách nhiệm giữa AWS và khách hàng.
+Bài này giới thiệu tổng quan về hạ tầng toàn cầu của AWS, các khái niệm quan trọng như Region, Availability Zone, thế nào là một ứng dụng đáp ứng yêu cầu High Availability, Fault Tolerance. Ta cũng sẽ tìm hiểu mô hình chia sẻ trách nhiệm giữa AWS và khách hàng.
 
 Trong bài này:
 1. Hạ tầng toàn cầu của AWS
