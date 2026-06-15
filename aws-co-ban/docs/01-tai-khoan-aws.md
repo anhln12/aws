@@ -1,5 +1,5 @@
 1. [Tổng quan](#tổng-quan)
-2. Root User
+2. [Root User](#root-user)
 3. AWS Organizations
 - Tài khoản quản lý (Management Account)
 - Tài khoản thành viên (Member Account)
@@ -15,7 +15,7 @@
 
 Một cách ngắn gọn, có thể hiểu tài khoản AWS như một "container" chứa các thực thể được tạo bởi tài khoản (IAM User, IAM Group, IAM Role) và tài nguyên AWS được cung cấp cho các thực thể đó. Tất cả chi phí phát sinh trong quá trình sử dụng các dịch vụ, bất kể được dùng bởi thực thể nào sẽ được tính vào chi phí của tài khoản và được khấu trừ theo phương thức thanh toán.
 
-2. Root User
+#2. Root User
 
 Khi tạo tài khoản AWS, bạn cung cấp email, tên tài khoản, và cách thức thanh toán (thẻ tín dụng/ ghi nợ). Root User là tài khoản chính được tạo sau khi đăng ký
 
