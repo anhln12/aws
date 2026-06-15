@@ -68,4 +68,43 @@ Mỗi subnet sẽ có 256 địa chỉ IP khả dụng (từ 172.31.x.0 đến 1
 
 Giờ hãy quay lại tìm hiểu kỹ hơn về VPC.
 
+3. Virtual Private Cloud (VPC)
+
+VPC là dịch vụ mạng ảo trong AWS. Mỗi VPC thuộc về một tài khoản AWS và một Region, tách biệt khỏi môi trường bên ngoài trừ khi được cấu hình cho phép kết nối. Đây là dịch vụ có mức độ phục hồi Region Resilience.
+
+3.1. VPC Mặc định
+
+Trong mỗi Region ở mỗi tài khoản AWS, có sẵn một VPC mặc định (default VPC), có thể xoá và tạo lại. CIDR của VPC mặc định luôn luôn là 172.31.0.0/16, giống nhau ở tất cả các tài khoản và tất cả các Region.
+
+Nếu bạn thắc mắc liệu có thể có xung đột địa chỉ IP không thì câu trả lời là không, vì như đã đề cập phía trên, các VPC hoàn toàn cô lập với nhau, VPC mặc định cũng vậy. Điều này giống với kết nối mạng nội bộ trong gia đình thường có dải CIDR 192.168.1.0/24. Vấn đề chỉ phát sinh khi kết nối 2 VPC với nhau, khi này bạn cần đảm bảo không có sự trùng lặp CIDR giữa các VPC được kết nối.
+
+Cũng vì lý do này, ta không thể kết nối 2 VPC mặc định với nhau! Khi đó, cần tự thiết kế VPC với CIDR riêng biệt, gọi là VPC tùy chỉnh (custom VPC), sẽ được trình bày trong bài sau. AWS đã cấu hình sẵn VPC mặc định với public subnet, Internet Gateway, bảng định tuyến (route table), Security Group và Network access control list (ACL), để người dùng có thể nhanh chóng bắt đầu với các ứng dụng đơn giản.
+
+Hình dưới đây minh hoạ cấu trúc của VPC mặc định, ví dụ ở Region us-east-2.
+
+<img width="608" height="369" alt="image" src="https://github.com/user-attachments/assets/e20f15e3-d195-43f0-9afa-b805bbe54c08" />
+
+Region này gồm 3 AZ: us-east-2a, us-east-2b, us-east-2c. Trong VPC mặc định, AWS tạo sẵn một public subnet trong mỗi AZ, với CIDR con /20, chia CIDR lớn /16 của VPC mặc định thành 3 subnet con:
+
+- Subnet 1: 172.31.0.0/20
+- Subnet 2: 172.31.16.0/20
+- Subnet 3: 172.31.32.0/20
+
+3.2. VPC Subnet
+
+Phía trên ta đã đề cập đến subnet trong VPC mặc định. Hãy tìm hiểu tổng quát hơn về subnet trong VPC.
+
+Mỗi VPC (mặc định hoặc tùy chỉnh) có thể được chia thành nhiều subnet. Mỗi subnet thuộc về một AZ trong Region của VPC đó, và có mức độ phục hồi AZ Resilience.
+
+CIDR của mỗi subnet là tập con trong CIDR của VPC, nhưng không thể trùng lặp với CIDR của subnet khác trong cùng VPC, do các subnet trong cùng VPC có thể giao tiếp với nhau, nên cần dùng CIDR con khác nhau để tránh xung đột địa chỉ IP.
+
+Trong mỗi subnet, có 5 IP không thể sử dụng, là 4 IP đầu tiên và IP cuối cùng. Xét ví dụ Subnet 172.31.0.0/20, ta không thể gán các IP sau cho dịch vụ nào:
+- IP đầu tiên 172.31.0.0, thuật ngữ gọi là Network Address. IP này đại diện cho subnet
+- IP thứ hai 172.31.0.1 (Network + 1): IP này được gán cho bộ định tuyến (Router) của VPC.
+- IP thứ ba 172.31.0.2 (Network + 2): IP này dùng cho DNS Server, phân giải DNS cho các tài nguyên trong subnet.
+- IP thứ tư 172.31.0.3 (Network + 3): IP này được AWS giữ trước cho tương lai, nếu cần triển khai chức năng nào khác.
+- IP cuối cùng 172.31.0.255: là địa chỉ broadcast (để gửi dữ liệu đến tất cả IP trong cùng subnet mà không cần chỉ định IP cụ thể). Dù AWS không hỗ trợ địa chỉ broadcast, IP cuối cùng này cũng không thể sử dụng.
+
+Khi tạo subnet, ta có thể lựa chọn “Auto Assign Public IPv4” để subnet này là public, tức các tài nguyên bên trong được tự động gán địa chỉ IP công cộng, có thể truy cập được từ Internet (tất nhiên là nếu đủ quyền hạn). 
+Ngược lại, bỏ chọn sẽ đặt subnet này thành private, giao tiếp nội bộ bên trong subnet (và VPC). Nếu cần IPv6, có thể chọn Auto Assign IPv6.
 
