@@ -6,6 +6,7 @@
 - Đơn vị tổ chức (Organizational Unit - OU)
 - Service Control Policy - SCP
 4. Tài liệu tham khảo
+
 ======================================================================
 
 1. Tổng quan
