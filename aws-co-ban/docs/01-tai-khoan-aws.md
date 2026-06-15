@@ -1,12 +1,11 @@
-1. Tổng quan
-2. Root User
-3. AWS Organizations
+I. Tổng quan
+II. Root User
+III. AWS Organizations
 - Tài khoản quản lý (Management Account)
 - Tài khoản thành viên (Member Account)
 - Đơn vị tổ chức (Organizational Unit - OU)
 - Service Control Policy - SCP
-4. Tài liệu tham khảo
-
+IV. Tài liệu tham khảo
 
 1. Tổng quan
 <img width="379" height="482" alt="image" src="https://github.com/user-attachments/assets/d17ca70e-9df7-4f2d-b79a-eaf27c5617ab" />
